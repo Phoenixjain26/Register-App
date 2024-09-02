@@ -4,6 +4,14 @@ pipeline {
         jdk 'Java17'
         maven 'maven3'
     }
+	 environment {
+	    APP_NAME = "register-app-pipeline"
+            RELEASE = "1.0.0"
+            DOCKER_USER = "niroshaum"
+            DOCKER_PASS = 'dockerhub'
+            IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
+            IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+	 }
 
 	
 	 stages{
@@ -14,7 +22,7 @@ pipeline {
         }
  stage("Checkout from SCM"){
                 steps {
-                    git branch: 'main', credentialsId: 'github', url: 'https://github.com/Phoenixjain26/register-app.git'
+                    git branch: 'main', credentialsId: 'github', url: 'https://github.com/Phoenixjain26/register-app'
                 }
         }
         stage("Build Application"){
@@ -58,7 +66,24 @@ pipeline {
                 }
 
             }
-       }	    
+       }
+		 stage("Trivy Scan") {
+           steps {
+               script {
+	            sh ('docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image anishjain1907/register-app-pipeline:latest --no-progress --scanners vuln  --exit-code 0 --severity HIGH,CRITICAL --format table')
+               }
+           }
+       }
+		 stage ('Cleanup Artifacts') {
+           steps {
+               script {
+                    sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "docker rmi ${IMAGE_NAME}:latest"
+               }
+          }
+       }
+
+
     }
    }
 
